@@ -1,0 +1,8 @@
+{
+  "provider": {
+    "groq": {
+      "apiKey": "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"
+    }
+  },
+  "model": "groq/qwen-2.5-coder-32b"
+}

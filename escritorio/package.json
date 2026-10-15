@@ -1,0 +1,30 @@
+{
+  "name": "partidas-rumi-escritorio",
+  "version": "1.0.0",
+  "description": "Panel de control — Partidas de Rumi",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "electron": "^33.0.0",
+    "pg": "^8.13.0"
+  },
+  "devDependencies": {
+    "electron-builder": "^25.1.0"
+  },
+  "build": {
+    "appId": "com.rumi.partidas",
+    "productName": "Partidas de Rumi",
+    "directories": {
+      "output": "instalador"
+    },
+    "win": {
+      "target": "installer"
+    }
+  }
+}

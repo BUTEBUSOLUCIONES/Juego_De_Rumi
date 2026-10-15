@@ -1,0 +1,696 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Partidas de Rumi — Panel de Control</title>
+  <style>
+    :root {
+      --fondo-negro: #000000;
+      --fondo-panel: #121212;
+      --fondo-tarjeta: #1a1a1a;
+      --borde: #2a2a2a;
+      --borde-claro: #383838;
+      --texto: #e8e8e8;
+      --texto-claro: #999999;
+      --acento: #3b82f6;
+      --acento-claro: #60a5fa;
+      --exito: #22c55e;
+      --alerta: #f59e0b;
+      --zebra: #161616;
+      --hover-fila: #1e293b;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+      font-family: 'Segoe UI', 'Roboto', 'Inter', sans-serif;
+    }
+
+    body {
+      background-color: var(--fondo-negro);
+      background: linear-gradient(180deg, #000000 0%, #0f0f0f 100%);
+      color: var(--texto);
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    /* Barra Superior */
+    .barra-superior {
+      background: var(--fondo-panel);
+      border-bottom: 1px solid var(--borde);
+      padding: 14px 32px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    .barra-superior h1 {
+      font-size: 18px;
+      font-weight: 600;
+      color: #ffffff;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .estado-conexion {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 13px;
+      color: var(--texto-claro);
+    }
+
+    .indicador {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      background: #ef4444;
+    }
+
+    .indicador.conectado {
+      background: var(--exito);
+      box-shadow: 0 0 8px rgba(34, 197, 94, 0.4);
+    }
+
+    /* Contenedor Principal */
+    .contenedor-principal {
+      display: flex;
+      flex: 1;
+      overflow: hidden;
+    }
+
+    /* Navegación Lateral */
+    .navegacion {
+      width: 240px;
+      background: var(--fondo-panel);
+      border-right: 1px solid var(--borde);
+      padding: 24px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+    }
+
+    .navegacion button {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 14px 18px;
+      border: none;
+      border-radius: 8px;
+      background: transparent;
+      color: var(--texto-claro);
+      font-size: 14px;
+      font-weight: 500;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      text-align: left;
+    }
+
+    .navegacion button:hover {
+      background: rgba(59, 130, 246, 0.1);
+      color: var(--texto);
+    }
+
+    .navegacion button.activo {
+      background: rgba(59, 130, 246, 0.2);
+      color: var(--acento-claro);
+      font-weight: 600;
+    }
+
+    .icono {
+      font-size: 18px;
+    }
+
+    /* Área de Contenido */
+    .area-contenido {
+      flex: 1;
+      padding: 24px 32px;
+      overflow-y: auto;
+    }
+
+    .cabecera-seccion {
+      margin-bottom: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 16px;
+    }
+
+    .titulo-seccion h2 {
+      font-size: 22px;
+      font-weight: 600;
+      color: #ffffff;
+      margin-bottom: 4px;
+    }
+
+    .subtitulo {
+      color: var(--texto-claro);
+      font-size: 13px;
+    }
+
+    /* Filtros */
+    .filtros {
+      display: flex;
+      gap: 12px;
+      align-items: center;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+      padding: 16px;
+      background: var(--fondo-tarjeta);
+      border-radius: 8px;
+      border: 1px solid var(--borde);
+    }
+
+    .filtros label {
+      font-size: 13px;
+      color: var(--texto-claro);
+      margin-right: 6px;
+    }
+
+    .filtros input, .filtros select {
+      padding: 10px 14px;
+      background: var(--fondo-panel);
+      border: 1px solid var(--borde-claro);
+      border-radius: 6px;
+      color: var(--texto);
+      font-size: 13px;
+      outline: none;
+      transition: border 0.2s;
+    }
+
+    .filtros input:focus, .filtros select:focus {
+      border-color: var(--acento);
+    }
+
+    .filtros button {
+      padding: 10px 16px;
+      background: var(--acento);
+      color: white;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      font-weight: 500;
+      transition: background 0.2s;
+    }
+
+    .filtros button:hover {
+      background: var(--acento-claro);
+    }
+
+    /* Tarjeta de Datos */
+    .tarjeta {
+      background: var(--fondo-tarjeta);
+      border-radius: 10px;
+      border: 1px solid var(--borde);
+      overflow: hidden;
+    }
+
+    /* Tabla con ZEBRA */
+    .tabla-contenedor {
+      overflow-x: auto;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 14px;
+    }
+
+    thead {
+      background: #1f1f1f;
+      border-bottom: 2px solid var(--borde);
+    }
+
+    th {
+      padding: 14px 18px;
+      text-align: left;
+      font-weight: 600;
+      color: #ffffff;
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    td {
+      padding: 14px 18px;
+      border-bottom: 1px solid var(--borde);
+      color: var(--texto);
+    }
+
+    /* EFECTO ZEBRA */
+    tbody tr:nth-child(even) {
+      background-color: var(--zebra);
+    }
+
+    tbody tr:hover {
+      background-color: var(--hover-fila);
+    }
+
+    /* Etiquetas de Estado */
+    .estado {
+      display: inline-flex;
+      align-items: center;
+      padding: 5px 12px;
+      border-radius: 20px;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .estado.activa {
+      background: rgba(34, 197, 94, 0.15);
+      color: #86efac;
+    }
+
+    .estado.finalizada {
+      background: rgba(245, 158, 11, 0.15);
+      color: #fcd34d;
+    }
+
+    /* Paginación */
+    .paginacion {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      border-top: 1px solid var(--borde);
+      flex-wrap: wrap;
+      gap: 12px;
+    }
+
+    .pag-info {
+      font-size: 13px;
+      color: var(--texto-claro);
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .pag-info select {
+      padding: 6px 10px;
+      background: var(--fondo-panel);
+      border: 1px solid var(--borde-claro);
+      color: var(--texto);
+      border-radius: 6px;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .pag-controles {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .pag-controles button {
+      padding: 8px 14px;
+      background: var(--fondo-panel);
+      border: 1px solid var(--borde-claro);
+      color: var(--texto);
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 13px;
+      transition: all 0.2s;
+    }
+
+    .pag-controles button:hover:not(:disabled) {
+      background: var(--acento);
+      border-color: var(--acento);
+      color: white;
+    }
+
+    .pag-controles button:disabled {
+      opacity: 0.4;
+      cursor: not-allowed;
+    }
+
+    .pag-controles input {
+      width: 60px;
+      padding: 8px 10px;
+      background: var(--fondo-panel);
+      border: 1px solid var(--borde-claro);
+      color: var(--texto);
+      border-radius: 6px;
+      text-align: center;
+      font-size: 13px;
+    }
+
+    .pag-controles span {
+      font-size: 13px;
+      color: var(--texto-claro);
+      margin: 0 4px;
+    }
+
+    .sin-datos {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--texto-claro);
+      font-style: italic;
+    }
+
+    /* Configuración oculta */
+    .config-oculta {
+      display: none;
+    }
+  </style>
+</head>
+<body>
+
+  <!-- Barra Superior -->
+  <header class="barra-superior">
+    <h1>🎲 Partidas de Rumi</h1>
+    <div class="estado-conexion">
+      <span class="indicador" id="indicadorConexion"></span>
+      <span id="textoConexion">Conectando...</span>
+    </div>
+  </header>
+
+  <!-- Contenido Principal -->
+  <div class="contenedor-principal">
+    <!-- Menú Lateral -->
+    <nav class="navegacion">
+      <button class="activo" data-modulo="sesiones" onclick="cargarModulo('sesiones', this)">
+        <span class="icono">📋</span>
+        <span>Sesiones</span>
+      </button>
+      <button data-modulo="participantes" onclick="cargarModulo('participantes', this)">
+        <span class="icono">👤</span>
+        <span>Participantes</span>
+      </button>
+      <button data-modulo="partidas" onclick="cargarModulo('partidas', this)">
+        <span class="icono">🎯</span>
+        <span>Partidas</span>
+      </button>
+      <button data-modulo="estadisticas" onclick="cargarModulo('estadisticas', this)">
+        <span class="icono">📈</span>
+        <span>Estadísticas</span>
+      </button>
+    </nav>
+
+    <!-- Área de Datos -->
+    <main class="area-contenido">
+      <div class="cabecera-seccion">
+        <div class="titulo-seccion">
+          <h2 id="tituloModulo">Sesiones</h2>
+          <p class="subtitulo" id="subtituloModulo">Listado de sesiones registradas</p>
+        </div>
+      </div>
+
+      <!-- Filtros -->
+      <div class="filtros" id="panelFiltros">
+        <div>
+          <label>Buscar:</label>
+          <input type="text" id="textoFiltro" placeholder="Escribe para filtrar..." oninput="aplicarFiltro()">
+        </div>
+        <div>
+          <label>Modo:</label>
+          <select id="modoFiltro" onchange="aplicarFiltro()">
+            <option value="contiene">Contiene</option>
+            <option value="inicia">Comienza con</option>
+          </select>
+        </div>
+        <button onclick="limpiarFiltro()">Limpiar</button>
+      </div>
+
+      <div class="tarjeta">
+        <div class="tabla-contenedor" id="contenidoTabla">
+          <p class="sin-datos">Cargando...</p>
+        </div>
+        
+        <!-- Paginación con combo de registros por página -->
+        <div class="paginacion" id="panelPaginacion">
+          <div class="pag-info">
+            <span id="infoPaginacion">Mostrando 0 de 0 registros</span>
+            <div>
+              <label>Por página:</label>
+              <select id="selRegistrosPagina" onchange="cambiarRegistrosPorPagina()">
+                <option value="5">5</option>
+                <option value="10" selected>10</option>
+                <option value="15">15</option>
+                <option value="20">20</option>
+                <option value="25">25</option>
+                <option value="30">30</option>
+                <option value="50">50</option>
+              </select>
+            </div>
+          </div>
+          <div class="pag-controles">
+            <button id="btnPrimera" onclick="irPagina(1)">◀◀</button>
+            <button id="btnAnterior" onclick="irPagina(paginaActual - 1)">◀</button>
+            <span>Pág</span>
+            <input type="number" id="campoPagina" min="1" value="1" onkeydown="if(event.key==='Enter'){const p=parseInt(this.value);if(p>=1&&p<=totalPaginas)irPagina(p);}">
+            <span id="totalPaginas">de 1</span>
+            <button id="btnSiguiente" onclick="irPagina(paginaActual + 1)">▶</button>
+            <button id="btnUltima" onclick="irPagina(totalPaginas)">▶▶</button>
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+
+  <!-- Configuración oculta -->
+  <div class="config-oculta">
+    <input type="hidden" id="cfg_host">
+    <input type="hidden" id="cfg_puerto">
+    <input type="hidden" id="cfg_baseDatos">
+    <input type="hidden" id="cfg_usuario">
+    <input type="hidden" id="cfg_contrasena">
+  </div>
+
+  <script>
+    const { Client } = require('pg');
+    const { ipcRenderer } = require('electron');
+    let cliente = null;
+    
+    // Variables de paginación y filtro
+    let datosCompletos = [];
+    let datosFiltrados = [];
+    let paginaActual = 1;
+    let registrosPorPagina = 10;
+    let totalPaginas = 1;
+    let moduloActivo = 'sesiones';
+
+    // Inicio automático
+    document.addEventListener('DOMContentLoaded', async () => {
+      const config = await ipcRenderer.invoke('leer-config');
+      
+      document.getElementById('cfg_host').value = config.host || 'localhost';
+      document.getElementById('cfg_puerto').value = config.puerto || 5432;
+      document.getElementById('cfg_baseDatos').value = config.baseDatos || 'partidas_rumi';
+      document.getElementById('cfg_usuario').value = config.usuario || 'postgres';
+      document.getElementById('cfg_contrasena').value = config.contrasena || '';
+
+      await establecerConexion();
+      await cargarModulo('sesiones', document.querySelector('[data-modulo="sesiones"]'));
+    });
+
+    async function establecerConexion() {
+      try {
+        cliente = new Client({
+          host: document.getElementById('cfg_host').value,
+          port: parseInt(document.getElementById('cfg_puerto').value),
+          database: document.getElementById('cfg_baseDatos').value,
+          user: document.getElementById('cfg_usuario').value,
+          password: document.getElementById('cfg_contrasena').value
+        });
+        await cliente.connect();
+        document.getElementById('indicadorConexion').classList.add('conectado');
+        document.getElementById('textoConexion').textContent = 'Conectado';
+      } catch (error) {
+        document.getElementById('textoConexion').textContent = `Error: ${error.message}`;
+      }
+    }
+
+    function marcarBotonActivo(boton) {
+      document.querySelectorAll('.navegacion button').forEach(b => b.classList.remove('activo'));
+      if (boton) boton.classList.add('activo');
+    }
+
+    async function cargarModulo(nombre, boton) {
+      marcarBotonActivo(boton);
+      moduloActivo = nombre;
+      paginaActual = 1;
+      
+      if (!cliente) {
+        document.getElementById('contenidoTabla').innerHTML = 
+          '<p class="sin-datos">Sin conexión con la base de datos</p>';
+        return;
+      }
+
+      let titulo, subtitulo;
+      
+      switch(nombre) {
+        case 'sesiones':
+          titulo = 'Sesiones';
+          subtitulo = 'Listado de sesiones registradas';
+          const resS = await cliente.query('SELECT * FROM sesiones ORDER BY numero DESC');
+          datosCompletos = resS.rows.map(s => ({
+            col1: s.numero,
+            col2: s.descripcion,
+            col3: `$${s.valor_apuesta_base}`,
+            col4: { texto: s.estado, clase: s.estado === 'Activa' ? 'activa' : 'finalizada' },
+            col5: (s.fecha_creacion || '').slice(0,19).replace('T',' ') || '—',
+            buscar: `${s.numero} ${s.descripcion}`
+          }));
+          break;
+          
+        case 'participantes':
+          titulo = 'Participantes';
+          subtitulo = 'Registro de jugadores';
+          const resP = await cliente.query('SELECT * FROM participantes ORDER BY nombre');
+          datosCompletos = resP.rows.map(p => ({
+            col1: p.id.slice(0,18) + '...',
+            col2: p.nombre,
+            col3: p.estado,
+            buscar: `${p.id} ${p.nombre} ${p.estado}`
+          }));
+          break;
+          
+        case 'partidas':
+          titulo = 'Partidas';
+          subtitulo = 'Historial de partidas';
+          const resPa = await cliente.query('SELECT * FROM partidas ORDER BY numero DESC');
+          datosCompletos = resPa.rows.map(p => ({
+            col1: p.numero,
+            col2: p.sesion_id,
+            col3: p.estado,
+            col4: p.ganador_id ? p.ganador_id.slice(0,16) + '...' : '—',
+            col5: p.valor_ganancia ? '$' + p.valor_ganancia : '—',
+            buscar: `${p.numero} ${p.sesion_id} ${p.estado} ${p.ganador_id || ''}`
+          }));
+          break;
+          
+        case 'estadisticas':
+          titulo = 'Estadísticas';
+          subtitulo = 'Rendimiento por participante';
+          const resE = await cliente.query(`
+            SELECT sp.sesion_numero, p.nombre, sp.partidas_ganadas, sp.partidas_perdidas, 
+                   sp.valores_ganados, sp.valores_perdidos
+            FROM sesiones_participantes sp
+            JOIN participantes p ON sp.participante_id = p.id
+            ORDER BY sp.sesion_numero, sp.partidas_ganadas DESC
+          `);
+          datosCompletos = resE.rows.map(e => ({
+            col1: e.sesion_numero,
+            col2: e.nombre,
+            col3: e.partidas_ganadas,
+            col4: e.partidas_perdidas,
+            col5: `$${e.valores_ganados}`,
+            col6: `$${e.valores_perdidos}`,
+            buscar: `${e.sesion_numero} ${e.nombre}`
+          }));
+          break;
+      }
+
+      document.getElementById('tituloModulo').textContent = titulo;
+      document.getElementById('subtituloModulo').textContent = subtitulo;
+      datosFiltrados = [...datosCompletos];
+      renderizarTabla();
+    }
+
+    function cambiarRegistrosPorPagina() {
+      registrosPorPagina = parseInt(document.getElementById('selRegistrosPagina').value);
+      paginaActual = 1;
+      renderizarTabla();
+    }
+
+    function aplicarFiltro() {
+      const texto = document.getElementById('textoFiltro').value.trim().toLowerCase();
+      const modo = document.getElementById('modoFiltro').value;
+      
+      if (!texto) {
+        datosFiltrados = [...datosCompletos];
+      } else {
+        datosFiltrados = datosCompletos.filter(d => {
+          const bus = d.buscar.toLowerCase();
+          return modo === 'inicia' ? bus.startsWith(texto) : bus.includes(texto);
+        });
+      }
+      paginaActual = 1;
+      renderizarTabla();
+    }
+
+    function limpiarFiltro() {
+      document.getElementById('textoFiltro').value = '';
+      datosFiltrados = [...datosCompletos];
+      paginaActual = 1;
+      renderizarTabla();
+    }
+
+    function irPagina(pagina) {
+      if (pagina < 1 || pagina > totalPaginas) return;
+      paginaActual = pagina;
+      document.getElementById('campoPagina').value = pagina;
+      renderizarTabla();
+    }
+
+    function renderizarTabla() {
+      totalPaginas = Math.max(1, Math.ceil(datosFiltrados.length / registrosPorPagina));
+      const inicio = (paginaActual - 1) * registrosPorPagina;
+      const fin = inicio + registrosPorPagina;
+      const paginaDatos = datosFiltrados.slice(inicio, fin);
+
+      // Encabezados según módulo
+      let encabezados = '';
+      switch(moduloActivo) {
+        case 'sesiones':
+          encabezados = '<tr><th>Nº</th><th>Descripción</th><th>Apuesta Base</th><th>Estado</th><th>Fecha</th></tr>'; break;
+        case 'participantes':
+          encabezados = '<tr><th>ID</th><th>Nombre</th><th>Estado</th></tr>'; break;
+        case 'partidas':
+          encabezados = '<tr><th>Nº</th><th>Sesión</th><th>Estado</th><th>Ganador</th><th>Valor</th></tr>'; break;
+        case 'estadisticas':
+          encabezados = '<tr><th>Sesión</th><th>Participante</th><th>Ganadas</th><th>Perdidas</th><th>Ganados</th><th>Perdidos</th></tr>'; break;
+      }
+
+      // Filas
+      let filas = '';
+      if (paginaDatos.length === 0) {
+        filas = `<tr><td colspan="100" class="sin-datos">No se encontraron registros</td></tr>`;
+      } else {
+        for (const d of paginaDatos) {
+          let celdas = '';
+          for (let i=1; i<=6; i++) {
+            const val = d[`col${i}`];
+            if (val === undefined) break;
+            if (typeof val === 'object' && val !== null) {
+              celdas += `<td><span class="estado ${val.clase}">${val.texto}</span></td>`;
+            } else {
+              celdas += `<td>${val}</td>`;
+            }
+          }
+          filas += `<tr>${celdas}</tr>`;
+        }
+      }
+
+      document.getElementById('contenidoTabla').innerHTML = `
+        <table>
+          <thead>${encabezados}</thead>
+          <tbody>${filas}</tbody>
+        </table>
+      `;
+
+      // Info paginación
+      document.getElementById('infoPaginacion').textContent = 
+        `Mostrando ${datosFiltrados.length === 0 ? 0 : inicio + 1}-${Math.min(fin, datosFiltrados.length)} de ${datosFiltrados.length} registros`;
+      document.getElementById('totalPaginas').textContent = `de ${totalPaginas}`;
+      document.getElementById('campoPagina').value = paginaActual;
+      document.getElementById('campoPagina').max = totalPaginas;
+      
+      // Botones
+      document.getElementById('btnPrimera').disabled = paginaActual === 1;
+      document.getElementById('btnAnterior').disabled = paginaActual === 1;
+      document.getElementById('btnSiguiente').disabled = paginaActual === totalPaginas;
+      document.getElementById('btnUltima').disabled = paginaActual === totalPaginas;
+    }
+  </script>
+</body>
+</html>

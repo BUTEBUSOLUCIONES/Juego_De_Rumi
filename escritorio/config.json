@@ -1,0 +1,7 @@
+{
+  "host": "localhost",
+  "puerto": 5432,
+  "baseDatos": "partidas_rumi",
+  "usuario": "postgres",
+  "contrasena": "postgres"
+}

@@ -1,0 +1,19 @@
+{
+  "compilerOptions": {
+    "ignoreDeprecations": "6.0",
+    "target": "ESNext",
+    "module": "ESNext",
+    "strict": true,
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["packages/mobile/src/*"]
+    },
+    "jsx": "react-native",
+    "skipLibCheck": true,
+    "esModuleInterop": true,
+    "allowSyntheticDefaultImports": true,
+    "forceConsistentCasingInFileNames": true,
+    "resolveJsonModule": true
+  },
+  "include": ["packages/mobile/src"]
+}
