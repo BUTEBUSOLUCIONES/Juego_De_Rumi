@@ -2,32 +2,31 @@
 // Pantalla de Gestión de Sesiones — Crear, listar, ver detalle y eliminar sesiones
 // Formato fecha: dd-mm-aaaa hhmm | Encabezado fecha: "Sesión del Día Nombre de Mes del Año"
 // Estilo de grilla: filas alternas (zebra) | Estado en color blanco | Columna Part. = cantidad de participantes
+// REGLA: Solo puede existir UNA sesión activa a la vez
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import { NavigationProp, useNavigation } from '@react-navigation/native';
 import { useEffect, useMemo, useState } from 'react';
 import {
-    Alert,
-    FlatList,
-    Modal,
-    ScrollView,
-    StyleSheet,
-    Text,
-    TextInput,
-    TouchableOpacity,
-    View,
+  Alert,
+  FlatList,
+  Modal,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 import {
-    guardarAsignacionParticipanteSesion,
-    guardarSesion,
-    obtenerParticipantesPorSesion,
-    obtenerPartidasPorSesion,
-    obtenerSesiones,
-    obtenerTodosLosParticipantes,
-    type ParticipanteGeneral,
+  guardarAsignacionParticipanteSesion,
+  guardarSesion,
+  obtenerParticipantesPorSesion,
+  obtenerPartidasPorSesion,
+  obtenerSesiones,
+  obtenerTodosLosParticipantes,
+  type ParticipanteGeneral,
 } from '../servicios/BaseDatos';
-
-
 
 // ==============================================================
 // TIPOS DE NAVEGACIÓN
@@ -75,12 +74,12 @@ const formatearFechaHora = (fecha: Date): string => {
 const formatearDescripcionSesion = (fecha: Date): string => {
   const diasSemana = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
   const meses = ['Enero', 'Febrero', 'Marzo', 'Abril', 'Mayo', 'Junio', 'Julio', 'Agosto', 'Septiembre', 'Octubre', 'Noviembre', 'Diciembre'];
-  
+
   const nombreDia = diasSemana[fecha.getDay()];
   const dia = fecha.getDate();
   const nombreMes = meses[fecha.getMonth()];
   const anio = fecha.getFullYear();
-  
+
   return `Sesión del ${nombreDia} ${dia} de ${nombreMes} del ${anio}`;
 };
 
@@ -115,7 +114,7 @@ const GestorSesiones = () => {
       const participantes = await obtenerTodosLosParticipantes();
       setParticipantesRegistrados(participantes);
       const sesionesGuardadas = await obtenerSesiones();
-      
+
       const mapeadas: SesionVista[] = [];
       for (const s of sesionesGuardadas) {
         const asignaciones = await obtenerParticipantesPorSesion(s.numero);
@@ -128,7 +127,7 @@ const GestorSesiones = () => {
           cantidadParticipantes: asignaciones.length,
         });
       }
-      
+
       setListaSesiones(mapeadas);
       if (mapeadas.length > 0) {
         const mayor = Math.max(...mapeadas.map(s => s.numero));
@@ -142,6 +141,16 @@ const GestorSesiones = () => {
   useEffect(() => {
     cargarDatos();
   }, []);
+
+  // ==============================================================
+  // ✅ NUEVA REGLA: Detectar si ya existe una sesión activa
+  // Propósito: Solo puede existir una sesión activa a la vez
+  // ==============================================================
+  const sesionActivaExistente = useMemo(() => {
+    return listaSesiones.find((s) => s.estado === 'Activa') || null;
+  }, [listaSesiones]);
+
+  const haySesionActiva = sesionActivaExistente !== null;
 
   // ==============================================================
   // PARTICIPANTES ACTIVOS DISPONIBLES
@@ -192,9 +201,31 @@ const GestorSesiones = () => {
   };
 
   // ==============================================================
+  // ✅ NUEVA FUNCIÓN: intentarCrearSesion
+  // Propósito: Valida si se puede abrir el modal de crear sesión
+  // ==============================================================
+  const intentarCrearSesion = () => {
+    if (haySesionActiva && sesionActivaExistente) {
+      Alert.alert(
+        '⚠️ Sesión activa en curso',
+        `Ya existe la Sesión Nº ${sesionActivaExistente.numero} activa.\n\nDebes finalizarla o suspenderla antes de crear una nueva.`,
+        [{ text: 'Entendido' }]
+      );
+      return;
+    }
+    setModalCrearAbierto(true);
+  };
+
+  // ==============================================================
   // CREAR NUEVA SESIÓN
   // ==============================================================
   const crearSesion = async () => {
+    // ✅ VALIDACIÓN EXTRA: Verificar nuevamente antes de guardar
+    if (haySesionActiva) {
+      Alert.alert('Validación', 'Ya existe una sesión activa. Finalícela antes de crear otra.');
+      return;
+    }
+
     let valorApuestaFinal: number;
     if (valorApuestaSeleccionado !== null) {
       valorApuestaFinal = valorApuestaSeleccionado;
@@ -208,12 +239,12 @@ const GestorSesiones = () => {
     }
 
     if (participantesSeleccionados.length < 3) {
-    Alert.alert('Validación', 'Seleccione al menos 3 participantes');
-    return;
+      Alert.alert('Validación', 'Seleccione al menos 3 participantes');
+      return;
     }
     if (participantesSeleccionados.length > 5) {
-    Alert.alert('Validación', 'No se permiten más de 5 participantes');
-    return;
+      Alert.alert('Validación', 'No se permiten más de 5 participantes');
+      return;
     }
 
     const descripcionFinal = descripcionSesion.trim() || formatearDescripcionSesion(fechaActual);
@@ -347,7 +378,7 @@ const GestorSesiones = () => {
   }
 
   // ==============================================================
-  // PANTALLA PRINCIPAL — Con columna Part.
+  // PANTALLA PRINCIPAL — Con columna Part. y validación de sesión única
   // ==============================================================
   return (
     <View style={estilos.pantalla}>
@@ -356,11 +387,35 @@ const GestorSesiones = () => {
           <Ionicons name="arrow-back" size={22} color="#ffffff" />
         </TouchableOpacity>
         <Text style={estilos.tituloPantalla}>Gestión de Sesiones</Text>
-        <TouchableOpacity onPress={() => setModalCrearAbierto(true)} style={estilos.botonCrearSesion}>
-          <Ionicons name="add-circle" size={20} color="#ffffff" />
-          <Text style={estilos.textoBotonCrear}>Crear Sesión</Text>
+        {/* ✅ BOTÓN BLOQUEADO si hay sesión activa */}
+        <TouchableOpacity
+          onPress={intentarCrearSesion}
+          style={[
+            estilos.botonCrearSesion,
+            haySesionActiva && estilos.botonCrearSesionBloqueado,
+          ]}
+          disabled={haySesionActiva}
+        >
+          <Ionicons
+            name={haySesionActiva ? 'lock-closed' : 'add-circle'}
+            size={20}
+            color="#ffffff"
+          />
+          <Text style={estilos.textoBotonCrear}>
+            {haySesionActiva ? 'Bloqueado' : 'Crear Sesión'}
+          </Text>
         </TouchableOpacity>
       </View>
+
+      {/* ✅ AVISO ROJO cuando hay sesión activa */}
+      {haySesionActiva && sesionActivaExistente && (
+        <View style={estilos.avisoSesionActiva}>
+          <Ionicons name="warning" size={18} color="#FCA5A5" />
+          <Text style={estilos.textoAvisoSesionActiva}>
+            Sesión Nº {sesionActivaExistente.numero} activa. Finalízala para crear otra.
+          </Text>
+        </View>
+      )}
 
       <View style={estilos.contenedorBusqueda}>
         <TextInput
@@ -515,7 +570,7 @@ const GestorSesiones = () => {
 };
 
 // ==============================================================
-// ESTILOS — con nueva columna Part.
+// ESTILOS — con nuevos estilos para el bloqueo
 // ==============================================================
 const estilos = StyleSheet.create({
   pantalla: {
@@ -547,10 +602,32 @@ const estilos = StyleSheet.create({
     borderRadius: 8,
     gap: 6,
   },
+  // ✅ NUEVO: Estilo cuando el botón está bloqueado
+  botonCrearSesionBloqueado: {
+    backgroundColor: '#6b7280',
+    opacity: 0.6,
+  },
   textoBotonCrear: {
     color: '#ffffff',
     fontWeight: '700',
     fontSize: 14,
+  },
+  // ✅ NUEVO: Aviso cuando hay sesión activa
+  avisoSesionActiva: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(239, 68, 68, 0.15)',
+    borderLeftWidth: 4,
+    borderLeftColor: '#EF4444',
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+  },
+  textoAvisoSesionActiva: {
+    color: '#FCA5A5',
+    fontSize: 13,
+    fontWeight: '600',
+    flex: 1,
   },
   contenedorBusqueda: {
     padding: 12,

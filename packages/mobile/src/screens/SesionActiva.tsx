@@ -189,7 +189,7 @@ const SesionActiva = ({ route }: { route?: { params?: { numeroSesion?: number } 
       setCargando(false);
       Alert.alert(
         'Sin sesión activa',
-        'Debe crear una sesión primero desde la opción Sesiones.',
+        'Debe crear una sesión primero desde la opción GestionSesiones.',
         [{ text: 'Aceptar', onPress: () => navegacion.navigate('Inicio') }]
       );
       return;

@@ -3,14 +3,9 @@
     "name": "Partidas de Rumi",
     "slug": "partidas-de-rumi",
     "version": "3.0.0",
-    "orientation": "portrait",
+    "orientation": "default",
     "icon": "./assets/icon.png",
     "userInterfaceStyle": "dark",
-    "splash": {
-      "image": "./assets/splash.png",
-      "resizeMode": "contain",
-      "backgroundColor": "#0A1629"
-    },
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -27,7 +22,16 @@
       }
     },
     "plugins": [
-      "expo-sqlite"
+      "expo-sqlite",
+      [
+        "expo-splash-screen",
+        {
+          "image": "./assets/splash.png",
+          "imageWidth": 500,
+          "resizeMode": "contain",
+          "backgroundColor": "#0A1629"
+        }
+      ]
     ],
     "extra": {
       "eas": {

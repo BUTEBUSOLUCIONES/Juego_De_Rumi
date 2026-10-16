@@ -1,56 +1,17 @@
-﻿// D:\PROYECTOS_2026\PROYECTOS_VS\Partidas_de_Rumi\packages\mobile\App.tsx
+﻿// D:\PROYECTOS_2026\PROYECTOS_VS\Juego_de_Rumi\packages\mobile\App.tsx
 // Componente raíz de la aplicación — controla arranque, inicialización de base de datos local
 // y configuración de navegación entre todas las pantallas. Sin conexión a servidor externo.
 import { NavigationContainer } from '@react-navigation/native';
-import { createNativeStackNavigator } from '@react-navigation/native-stack';
 import { useEffect, useState } from 'react';
 import { ActivityIndicator, AppState, StyleSheet, Text, View } from 'react-native';
-// Importación de pantallas del sistema
-import ConsultarSesiones from './src/screens/ConsultarSesiones';
-import Estadisticas from './src/screens/Estadisticas';
-import GestionSesiones from './src/screens/GestionSesiones';
-import Historial from './src/screens/Historial';
-import PantallaInicio from './src/screens/PantallaInicio';
-import Participantes from './src/screens/Participantes';
-import ResultadosSesion from './src/screens/ResultadosSesion';
-import SesionActiva from './src/screens/SesionActiva';
+
+// Menú lateral (Drawer) con todas las pantallas
+import MenuLateral from './src/navegacion/MenuLateral';
+
 // Servicio de inicialización de base de datos local
 import { inicializarBaseDatos } from './src/servicios/BaseDatos';
 // Servicio de sincronización con servidor
 import { sincronizarTodo } from './src/servicios/Sincronizacion';
-
-// Definición de tipos de rutas — parámetros que puede recibir cada pantalla
-type RutasApp = {
-  Inicio: undefined;
-  Participantes: undefined;
-  GestionSesiones: undefined;
-  SesionActiva: { numeroSesion?: number };
-  ConsultarSesiones: undefined;
-  ResultadosSesion: {
-    numeroSesion: number;
-    descripcion: string;
-    valorApuesta: number;
-    totalPartidas: number;
-    partidasConGanador: number;
-    partidasEmpatadas: number;
-    partidasAnuladas: number;
-    totalApuestas: number;
-    estadisticas: Array<{
-      participanteId: string;
-      nombre: string;
-      partidasGanadas: number;
-      partidasPerdidas: number;
-      valoresGanados: number;
-      valoresPerdidos: number;
-      saldo: number;
-    }>;
-  };
-  Historial: undefined;
-  Estadisticas: undefined;
-};
-
-// Creación del navegador principal de pila
-const Navegacion = createNativeStackNavigator<RutasApp>();
 
 // ==============================================================
 // FUNCIÓN: App
@@ -107,7 +68,7 @@ export default function App() {
     const intervalo = setInterval(() => {
       sincronizarTodo();
     }, 5 * 60 * 1000); // ⏱️ 5 minutos
-    
+
     return () => clearInterval(intervalo);
   }, []);
 
@@ -130,27 +91,10 @@ export default function App() {
     );
   }
 
-  // Estructura de navegación principal — todas las pantallas registradas
+  // Estructura de navegación principal — menú lateral con todas las pantallas
   return (
     <NavigationContainer>
-      <Navegacion.Navigator
-        initialRouteName="Inicio"
-        screenOptions={{
-          headerStyle: { backgroundColor: '#0A1629' },
-          headerTintColor: '#FFFFFF',
-          headerTitleStyle: { fontWeight: '700' },
-          contentStyle: { backgroundColor: '#0A1629' },
-        }}
-      >
-        <Navegacion.Screen name="Inicio" component={PantallaInicio} options={{ title: 'Menú Principal' }} />
-        <Navegacion.Screen name="Participantes" component={Participantes} options={{ title: 'Participantes' }} />
-        <Navegacion.Screen name="GestionSesiones" component={GestionSesiones} options={{ title: 'Gestión de Sesiones' }} />
-        <Navegacion.Screen name="SesionActiva" component={SesionActiva} options={{ title: 'Sesión Activa' }} />
-        <Navegacion.Screen name="ConsultarSesiones" component={ConsultarSesiones} options={{ title: 'Consultar Sesiones' }} />
-        <Navegacion.Screen name="ResultadosSesion" component={ResultadosSesion} options={{ title: 'Resultados de Sesión' }} />
-        <Navegacion.Screen name="Historial" component={Historial} options={{ title: 'Historial' }} />
-        <Navegacion.Screen name="Estadisticas" component={Estadisticas} options={{ title: 'Estadísticas' }} />
-      </Navegacion.Navigator>
+      <MenuLateral />
     </NavigationContainer>
   );
 }

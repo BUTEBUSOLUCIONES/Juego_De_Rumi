@@ -125,6 +125,11 @@ venv\Scripts\activate
 D:\PROYECTOS_2026\PROYECTOS_VS\Juego_de_Rumi\packages\server
 uvicorn main:app --reload --host 0.0.0.0 --port 8000
 
+ ### 1.3 GENERAR APK E INSTALAR APK 
+ .\generar_apk.bat
+C:\Android-SDK_2025_06\platform-tools\adb.exe devices
+C:\Android-SDK_2025_06\platform-tools\adb.exe uninstall com.partidasderumi.app
+C:\Android-SDK_2025_06\platform-tools\adb.exe install -r Rumi.apk
 
 5. HISTORIAL DE CAMBIOS
 Fecha	Versión	Cambio realizado

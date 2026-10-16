@@ -40,6 +40,33 @@ const ResultadosSesion = () => {
     origen, // ✅ Ahora sí existe
   } = (route.params || {}) as Parametros;
 
+    // ==============================================================
+  // GUARDIÁN: Verificar que llegaron los parámetros necesarios
+  // Propósito: Evitar que la app se caiga si se entra sin datos
+  // ==============================================================
+  if (!numeroSesion || !estadisticas || !Array.isArray(estadisticas)) {
+    return (
+      <View style={estilos.pantalla}>
+        <View style={estilos.mensajeVacio}>
+          <Ionicons name="information-circle-outline" size={48} color="#94A3B8" />
+          <Text style={estilos.tituloVacio}>Sin datos de sesión</Text>
+          <Text style={estilos.textoVacio}>
+            Para ver los resultados, debes seleccionar una sesión desde
+            {'\n'}
+            "Consultar Sesiones".
+          </Text>
+          <TouchableOpacity
+            style={estilos.botonVacio}
+            onPress={() => navegacion.navigate('ConsultarSesiones')}
+          >
+            <Ionicons name="arrow-back" size={20} color="#fff" />
+            <Text style={estilos.textoBoton}>Ir a Consultar Sesiones</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+    );
+  }
+
   // ✅ Definir a dónde volver
   const volver = () => {
     if (origen === 'Consulta') {
@@ -176,6 +203,35 @@ const ResultadosSesion = () => {
 };
 
 const estilos = StyleSheet.create({
+    mensajeVacio: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    padding: 32,
+  },
+  tituloVacio: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#FFFFFF',
+    marginTop: 16,
+    marginBottom: 12,
+  },
+  textoVacio: {
+    fontSize: 14,
+    color: '#94A3B8',
+    textAlign: 'center',
+    lineHeight: 22,
+    marginBottom: 24,
+  },
+  botonVacio: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+    backgroundColor: 'rgba(34,197,94,0.6)',
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 10,
+  },
   pantalla: {
     flex: 1,
     backgroundColor: '#0A1629',
