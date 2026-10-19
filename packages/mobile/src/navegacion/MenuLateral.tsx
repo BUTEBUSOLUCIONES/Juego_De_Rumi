@@ -3,6 +3,7 @@
 import { createDrawerNavigator } from '@react-navigation/drawer';
 
 // Importación de pantallas
+import AcercaDe from '../screens/AcercaDe';
 import ConfiguracionServidor from '../screens/ConfiguracionServidor';
 import ConsultarSesiones from '../screens/ConsultarSesiones';
 import Estadisticas from '../screens/Estadisticas';
@@ -46,13 +47,14 @@ type RutasMenu = {
   Sincronizar: undefined;
   RegistrosSincronizacion: undefined;
   ConfiguracionServidor: undefined;
+  AcercaDe: undefined;
 };
 
 const Menu = createDrawerNavigator<RutasMenu>();
 
 // ==============================================================
 // COMPONENTE: MenuLateral
-// Propósito: Menú lateral con todas las pantallas + opción Sincronizar
+// Propósito: Menú lateral con todas las pantallas + opción Acerca de
 // ==============================================================
 export default function MenuLateral() {
   return (
@@ -129,7 +131,12 @@ export default function MenuLateral() {
         name="ConfiguracionServidor"
         component={ConfiguracionServidor}
         options={{ title: 'Configuración del Servidor', drawerLabel: '⚙️  Configuración' }}
-        />
-      </Menu.Navigator>
+      />
+      <Menu.Screen
+        name="AcercaDe"
+        component={AcercaDe}
+        options={{ title: 'Acerca de', drawerLabel: 'ℹ️  Acerca de' }}
+      />
+    </Menu.Navigator>
   );
 }

@@ -1,4 +1,6 @@
 // D:\PROYECTOS_2026\PROYECTOS_VS\Juego_de_Rumi\packages\mobile\src\servicios\ConfiguracionServidor.ts
+// Fecha última modificación: 17/10/2026
+
 // Servicio de configuración del servidor
 // Guarda y lee IP, puerto y carpeta del proyecto desde el almacenamiento local
 import AsyncStorage from '@react-native-async-storage/async-storage';
@@ -32,7 +34,7 @@ export type ConfiguracionServidor = {
 const CONFIGURACION_POR_DEFECTO: ConfiguracionServidor = {
   ip: '192.168.1.53',
   puerto: '8000',
-  carpeta: '/api/sincronizar/',
+  carpeta: '/rumi/api/sincronizar/',
 };
 
 // ==============================================================
@@ -48,7 +50,7 @@ export async function obtenerConfiguracion(): Promise<ConfiguracionServidor> {
       return {
         ip: datos.ip || CONFIGURACION_POR_DEFECTO.ip,
         puerto: datos.puerto || CONFIGURACION_POR_DEFECTO.puerto,
-        carpeta: datos.carpeta || CONFIGURACION_POR_DEFECTO.carpeta,
+        carpeta: (datos.carpeta && datos.carpeta.trim()) || CONFIGURACION_POR_DEFECTO.carpeta
       };
     }
   } catch (error) {
@@ -95,7 +97,8 @@ export async function restablecerConfiguracion(): Promise<void> {
 // ==============================================================
 export async function construirUrlServidor(): Promise<string> {
   const config = await obtenerConfiguracion();
-  const carpeta = config.carpeta.trim().replace(/^\/+|\/+$/g, ''); // quitar slashes
+  // Quitar barras sobrantes al inicio y final de la carpeta
+  const carpeta = config.carpeta.trim().replace(/^\/+|\/+$/g, '');
   const base = `http://${config.ip}:${config.puerto}`;
   return carpeta ? `${base}/${carpeta}` : base;
 }

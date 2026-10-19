@@ -1,5 +1,4 @@
-# main.py — SERVIDOR COMPLETO CON HISTORIAL DE SINCRONIZACIÓN
-from fastapi import FastAPI, HTTPException
+from fastapi import FastAPI, HTTPException, APIRouter
 from pydantic import BaseModel
 from datetime import datetime
 import psycopg2
@@ -7,6 +6,9 @@ from psycopg2.extras import RealDictCursor
 from typing import Optional, List
 
 app = FastAPI(title="Sincronización Rumi", version="3.0.0")
+
+# 🔗 Prefijo exclusivo para Rumi
+rumi_router = APIRouter(prefix="/rumi")
 
 # ==============================================================
 # CONEXIÓN A BASE DE DATOS
@@ -16,19 +18,14 @@ def get_db_connection():
         host="localhost",
         database="partidas_rumi",
         user="postgres",
-        password="postgres",  # ← Actualiza con tu contraseña real
+        password="postgres",
         port=5432
     )
 
 # ==============================================================
 # FUNCIONES DE HISTORIAL DE SINCRONIZACIÓN
 # ==============================================================
-def registrar_inicio_sincronizacion(
-    conn,
-    nombre_tabla: str,
-    registros_enviados: int = 0
-) -> int:
-    """Registra el inicio de una sincronización y devuelve su ID"""
+def registrar_inicio_sincronizacion(conn, nombre_tabla: str, registros_enviados: int = 0) -> int:
     cursor = conn.cursor()
     fecha_inicio = datetime.now()
     cursor.execute("""
@@ -41,13 +38,7 @@ def registrar_inicio_sincronizacion(
     conn.commit()
     return sincro_id
 
-def finalizar_sincronizacion(
-    conn,
-    sincro_id: int,
-    registros_recibidos: int,
-    estado: str = 'Completado'
-) -> None:
-    """Actualiza el registro con fecha de fin y resultado final"""
+def finalizar_sincronizacion(conn, sincro_id: int, registros_recibidos: int, estado: str = 'Completado') -> None:
     cursor = conn.cursor()
     fecha_fin = datetime.now()
     cursor.execute("""
@@ -66,7 +57,6 @@ class SesionCreate(BaseModel):
     valorApuestaBase: float
     estado: str
     fechaCreacion: str
-  # ✅ AGREGA ESTO 👇
     fechaCierre: Optional[str] = None
 
 class ParticipanteCreate(BaseModel):
@@ -106,51 +96,32 @@ class EstadisticaCreate(BaseModel):
     actualizadoEn: str
 
 # ==============================================================
-# ENDPOINT: SINCRONIZAR SESIÓN
+# ENDPOINTS con prefijo /rumi
 # ==============================================================
-@app.post("/api/sincronizar/sesion")
+@rumi_router.post("/api/sincronizar/sesion")
 async def sincronizar_sesion(datos: SesionCreate):
     conn = get_db_connection()
-    
     sincro_id = registrar_inicio_sincronizacion(conn, 'sesiones', 1)
-    
     try:
         cursor = conn.cursor()
         cursor.execute("SELECT numero FROM sesiones WHERE numero = %s", (datos.numero,))
         existe = cursor.fetchone()
-        
         if existe:
             cursor.execute("""
-            UPDATE sesiones 
-            SET descripcion = %s, valor_apuesta_base = %s, estado = %s, fecha_cierre = %s
-            WHERE numero = %s
-            """, (
-                    datos.descripcion,
-                    datos.valorApuestaBase,
-                    datos.estado,
-                    datos.fechaCierre,   # ✅ AGREGADO
-                    datos.numero
-                ))
+                UPDATE sesiones 
+                SET descripcion = %s, valor_apuesta_base = %s, estado = %s, fecha_cierre = %s
+                WHERE numero = %s
+            """, (datos.descripcion, datos.valorApuestaBase, datos.estado, datos.fechaCierre, datos.numero))
             resultado = 'actualizado'
         else:
             cursor.execute("""
                 INSERT INTO sesiones (numero, descripcion, valor_apuesta_base, estado, fecha_creacion, fecha_cierre)
                 VALUES (%s, %s, %s, %s, %s, %s)
-                """, (
-                datos.numero,
-                datos.descripcion,
-                datos.valorApuestaBase,
-                datos.estado,
-                datos.fechaCreacion,
-                datos.fechaCierre,   # ✅ AGREGADO
-            ))
+            """, (datos.numero, datos.descripcion, datos.valorApuestaBase, datos.estado, datos.fechaCreacion, datos.fechaCierre))
             resultado = 'nuevo'
-
         conn.commit()
-
         finalizar_sincronizacion(conn, sincro_id, 1, 'Completado')
         return {"estado": resultado, "numero": datos.numero}
-        
     except Exception as e:
         conn.rollback()
         finalizar_sincronizacion(conn, sincro_id, 0, f'Error: {str(e)}')
@@ -158,20 +129,14 @@ async def sincronizar_sesion(datos: SesionCreate):
     finally:
         conn.close()
 
-# ==============================================================
-# ENDPOINT: SINCRONIZAR PARTICIPANTE
-# ==============================================================
-@app.post("/api/sincronizar/participante")
+@rumi_router.post("/api/sincronizar/participante")
 async def sincronizar_participante(datos: ParticipanteCreate):
     conn = get_db_connection()
-    
     sincro_id = registrar_inicio_sincronizacion(conn, 'participantes', 1)
-    
     try:
         cursor = conn.cursor()
         cursor.execute("SELECT id FROM participantes WHERE id = %s", (datos.id,))
         existe = cursor.fetchone()
-        
         if existe:
             cursor.execute("""
                 UPDATE participantes 
@@ -185,12 +150,9 @@ async def sincronizar_participante(datos: ParticipanteCreate):
                 VALUES (%s, %s, %s, %s)
             """, (datos.id, datos.nombre, datos.estado, datos.actualizadoEn))
             resultado = 'nuevo'
-        
         conn.commit()
-        
         finalizar_sincronizacion(conn, sincro_id, 1, 'Completado')
         return {"estado": resultado, "id": datos.id}
-        
     except Exception as e:
         conn.rollback()
         finalizar_sincronizacion(conn, sincro_id, 0, f'Error: {str(e)}')
@@ -198,15 +160,10 @@ async def sincronizar_participante(datos: ParticipanteCreate):
     finally:
         conn.close()
 
-# ==============================================================
-# ENDPOINT: SINCRONIZAR SESIÓN-PARTICIPANTE
-# ==============================================================
-@app.post("/api/sincronizar/sesion-participante")
+@rumi_router.post("/api/sincronizar/sesion-participante")
 async def sincronizar_sesion_participante(datos: SesionParticipanteCreate):
     conn = get_db_connection()
-    
     sincro_id = registrar_inicio_sincronizacion(conn, 'sesiones_participantes', 1)
-    
     try:
         cursor = conn.cursor()
         cursor.execute("""
@@ -214,7 +171,6 @@ async def sincronizar_sesion_participante(datos: SesionParticipanteCreate):
             WHERE sesion_numero = %s AND participante_id = %s
         """, (datos.sesionNumero, datos.participanteId))
         existe = cursor.fetchone()
-        
         if existe:
             cursor.execute("""
                 UPDATE sesiones_participantes 
@@ -235,12 +191,9 @@ async def sincronizar_sesion_participante(datos: SesionParticipanteCreate):
                   datos.partidasGanadas, datos.partidasPerdidas,
                   datos.valoresGanados, datos.valoresPerdidos, datos.actualizadoEn))
             resultado = 'nuevo'
-        
         conn.commit()
-        
         finalizar_sincronizacion(conn, sincro_id, 1, 'Completado')
         return {"estado": resultado, "id": datos.id}
-        
     except Exception as e:
         conn.rollback()
         finalizar_sincronizacion(conn, sincro_id, 0, f'Error: {str(e)}')
@@ -248,54 +201,31 @@ async def sincronizar_sesion_participante(datos: SesionParticipanteCreate):
     finally:
         conn.close()
 
-# ==============================================================
-# ENDPOINT: SINCRONIZAR PARTIDA
-# ==============================================================
-@app.post("/api/sincronizar/partida")
+@rumi_router.post("/api/sincronizar/partida")
 async def sincronizar_partida(datos: PartidaCreate):
     conn = get_db_connection()
-    
     sincro_id = registrar_inicio_sincronizacion(conn, 'partidas', 1)
-    
     try:
         cursor = conn.cursor()
         cursor.execute("SELECT id FROM partidas WHERE id = %s", (datos.id,))
         existe = cursor.fetchone()
-        
         if existe:
             cursor.execute("""
                 UPDATE partidas 
                 SET numero = %s, sesion_id = %s, estado = %s, sincronizado = %s, actualizado_en = %s
                 WHERE id = %s
-            """, (
-                    datos.numero,
-                    datos.sesionNumero,  # ✅ Este es el número de la sesión
-                    datos.estado,
-                    datos.sincronizado,
-                    datos.actualizadoEn,
-                    datos.id
-                ))
+            """, (datos.numero, datos.sesionNumero, datos.estado, datos.sincronizado, datos.actualizadoEn, datos.id))
             resultado = 'actualizado'
         else:
             cursor.execute("""
                 INSERT INTO partidas 
                 (id, numero, sesion_id, estado, sincronizado, actualizado_en)
                 VALUES (%s, %s, %s, %s, %s, %s)
-            """, (
-                    datos.id,
-                    datos.numero,
-                    datos.sesionNumero,  # ✅ Aquí también
-                    datos.estado,
-                    datos.sincronizado,
-                    datos.actualizadoEn
-                ))
+            """, (datos.id, datos.numero, datos.sesionNumero, datos.estado, datos.sincronizado, datos.actualizadoEn))
             resultado = 'nuevo'
-        
         conn.commit()
-        
         finalizar_sincronizacion(conn, sincro_id, 1, 'Completado')
         return {"estado": resultado, "id": datos.id}
-        
     except Exception as e:
         conn.rollback()
         finalizar_sincronizacion(conn, sincro_id, 0, f'Error: {str(e)}')
@@ -303,15 +233,10 @@ async def sincronizar_partida(datos: PartidaCreate):
     finally:
         conn.close()
 
-# ==============================================================
-# ENDPOINT: SINCRONIZAR ESTADÍSTICA
-# ==============================================================
-@app.post("/api/sincronizar/estadistica")
+@rumi_router.post("/api/sincronizar/estadistica")
 async def sincronizar_estadistica(datos: EstadisticaCreate):
     conn = get_db_connection()
-    
     sincro_id = registrar_inicio_sincronizacion(conn, 'estadisticas', 1)
-    
     try:
         cursor = conn.cursor()
         cursor.execute("""
@@ -319,7 +244,6 @@ async def sincronizar_estadistica(datos: EstadisticaCreate):
             WHERE sesion_numero = %s AND participante_id = %s
         """, (datos.sesionNumero, datos.participanteId))
         existe = cursor.fetchone()
-        
         if existe:
             cursor.execute("""
                 UPDATE estadisticas 
@@ -341,12 +265,9 @@ async def sincronizar_estadistica(datos: EstadisticaCreate):
                   datos.valoresGanados, datos.valoresPerdidos,
                   datos.saldo, datos.actualizadoEn))
             resultado = 'nuevo'
-        
         conn.commit()
-        
         finalizar_sincronizacion(conn, sincro_id, 1, 'Completado')
         return {"estado": resultado, "id": datos.id}
-        
     except Exception as e:
         conn.rollback()
         finalizar_sincronizacion(conn, sincro_id, 0, f'Error: {str(e)}')
@@ -354,15 +275,12 @@ async def sincronizar_estadistica(datos: EstadisticaCreate):
     finally:
         conn.close()
 
-# ==============================================================
-# ENDPOINT: DESCARGA DE NOVEDADES
-# ==============================================================
-@app.get("/api/sincronizar/actualizaciones")
+@rumi_router.get("/api/sincronizar/actualizaciones")
 async def obtener_actualizaciones(desde: str = "2000-01-01T00:00:00"):
-    return {
-        "nuevos": [],
-        "mensaje": "Endpoint de descarga activo"
-    }
+    return {"nuevos": [], "mensaje": "Endpoint de descarga activo"}
+
+# ✅ Registrar rutas
+app.include_router(rumi_router)
 
 # ==============================================================
 # INICIAR SERVIDOR

@@ -1,5 +1,5 @@
 // D:\PROYECTOS_2026\PROYECTOS_VS\Juego_de_Rumi\packages\mobile\src\screens\RegistrosSincronizacion.tsx
-// Pantalla que muestra el historial de sincronizaciones guardadas en la base de datos local
+// Pantalla que muestra el historial de sincronizaciones con efecto zebra, fecha de fin y mensaje destacado
 import { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
@@ -23,7 +23,7 @@ export default function RegistrosSincronizacion() {
 
   // ==============================================================
   // FUNCIÓN: cargarRegistros
-  // Propósito: Lee el historial de sincronización desde la base de datos local
+  // Propósito: Lee y ordena el historial de forma descendente (recientes primero)
   // ==============================================================
   const cargarRegistros = async () => {
     try {
@@ -55,7 +55,6 @@ export default function RegistrosSincronizacion() {
 
   // ==============================================================
   // FUNCIÓN: borrarAntiguos
-  // Propósito: Limpia los registros con más de 7 días de antigüedad
   // ==============================================================
   const borrarAntiguos = async () => {
     await limpiarHistorialSincronizacion(7);
@@ -64,9 +63,9 @@ export default function RegistrosSincronizacion() {
 
   // ==============================================================
   // FUNCIÓN AUXILIAR: formatearFecha
-  // Propósito: Convierte una fecha ISO en texto legible
   // ==============================================================
-  const formatearFecha = (fechaIso: string) => {
+  const formatearFecha = (fechaIso?: string) => {
+    if (!fechaIso) return 'N/A';
     try {
       const fecha = new Date(fechaIso);
       return fecha.toLocaleString('es-EC', {
@@ -75,6 +74,7 @@ export default function RegistrosSincronizacion() {
         year: 'numeric',
         hour: '2-digit',
         minute: '2-digit',
+        second: '2-digit',
       });
     } catch {
       return fechaIso;
@@ -115,21 +115,25 @@ export default function RegistrosSincronizacion() {
         </View>
       ) : (
         <>
-          {registros.map((registro) => {
+          {registros.map((registro, index) => {
             const esError = registro.estado === 'Error';
             const esProceso = registro.estado === 'En proceso';
+            const esZebraPar = index % 2 === 0;
+
             return (
               <View
-                key={registro.id}
+                key={registro.id || index}
                 style={[
                   estilos.tarjeta,
+                  esZebraPar ? estilos.tarjetaGrisClaro : estilos.tarjetaCianTenue,
                   esError
-                    ? estilos.tarjetaError
+                    ? estilos.bordeError
                     : esProceso
-                    ? estilos.tarjetaProceso
-                    : estilos.tarjetaCorrecta,
+                    ? estilos.bordeProceso
+                    : estilos.bordeCorrecto,
                 ]}
               >
+                {/* Cabecera: Tabla y Estado */}
                 <View style={estilos.filaCabecera}>
                   <Text style={estilos.nombreTabla}>
                     {esError ? '❌' : esProceso ? '⏳' : '✅'} {registro.nombreTabla}
@@ -148,22 +152,32 @@ export default function RegistrosSincronizacion() {
                   </Text>
                 </View>
 
-                <Text style={estilos.fecha}>
-                  Inicio: {formatearFecha(registro.fechaInicio)}
-                </Text>
-                {registro.fechaFin && (
+                {/* Fechas de Inicio y Fin */}
+                <View style={estilos.bloqueFechas}>
                   <Text style={estilos.fecha}>
-                    Fin: {formatearFecha(registro.fechaFin)}
+                    📅 <Text style={estilos.etiquetaCampo}>Inicio:</Text> {formatearFecha(registro.fechaInicio)}
                   </Text>
-                )}
+                  <Text style={estilos.fecha}>
+                    🏁 <Text style={estilos.etiquetaCampo}>Fin:</Text> {formatearFecha(registro.fechaFin)}
+                  </Text>
+                </View>
 
+                {/* ✅ CAMPO MENSAJE — SIEMPRE VISIBLE */}
+                <View style={estilos.contenedorMensaje}>
+                  <Text style={estilos.etiquetaMensaje}>Mensaje:</Text>
+                  <Text style={estilos.textoMensaje}>
+                    {registro.mensaje || 'Sin mensaje'}
+                  </Text>
+                </View>
+
+                {/* Registros Enviados y Recibidos */}
                 <View style={estilos.filaDetalle}>
                   <Text style={estilos.etiqueta}>Enviados:</Text>
-                  <Text style={estilos.valor}>{registro.registrosEnviados}</Text>
+                  <Text style={estilos.valor}>{registro.registrosEnviados ?? 0}</Text>
                 </View>
                 <View style={estilos.filaDetalle}>
                   <Text style={estilos.etiqueta}>Recibidos:</Text>
-                  <Text style={estilos.valor}>{registro.registrosRecibidos}</Text>
+                  <Text style={estilos.valor}>{registro.registrosRecibidos ?? 0}</Text>
                 </View>
               </View>
             );
@@ -229,23 +243,26 @@ const estilos = StyleSheet.create({
     marginBottom: 12,
     borderLeftWidth: 4,
   },
-  tarjetaCorrecta: {
-    backgroundColor: 'rgba(34, 197, 94, 0.1)',
+  tarjetaGrisClaro: {
+    backgroundColor: 'rgba(255, 255, 255, 0.06)',
+  },
+  tarjetaCianTenue: {
+    backgroundColor: 'rgba(6, 182, 212, 0.07)',
+  },
+  bordeCorrecto: {
     borderLeftColor: '#22C55E',
   },
-  tarjetaError: {
-    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+  bordeError: {
     borderLeftColor: '#EF4444',
   },
-  tarjetaProceso: {
-    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+  bordeProceso: {
     borderLeftColor: '#F59E0B',
   },
   filaCabecera: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 6,
+    marginBottom: 8,
   },
   nombreTabla: {
     fontSize: 15,
@@ -259,7 +276,6 @@ const estilos = StyleSheet.create({
     paddingHorizontal: 8,
     paddingVertical: 3,
     borderRadius: 6,
-    overflow: 'hidden',
   },
   estadoCorrecto: {
     backgroundColor: 'rgba(34, 197, 94, 0.25)',
@@ -273,10 +289,40 @@ const estilos = StyleSheet.create({
     backgroundColor: 'rgba(245, 158, 11, 0.25)',
     color: '#FCD34D',
   },
+  bloqueFechas: {
+    backgroundColor: 'rgba(0, 0, 0, 0.15)',
+    padding: 8,
+    borderRadius: 6,
+    marginBottom: 10,
+  },
   fecha: {
     fontSize: 12,
-    color: '#94A3B8',
+    color: '#CBD5E1',
     marginBottom: 2,
+  },
+  etiquetaCampo: {
+    fontWeight: '600',
+    color: '#94A3B8',
+  },
+  contenedorMensaje: {
+    marginVertical: 6,
+    backgroundColor: 'rgba(6, 182, 212, 0.12)',
+    padding: 10,
+    borderRadius: 6,
+    borderLeftWidth: 2,
+    borderLeftColor: '#06B6D4',
+  },
+  etiquetaMensaje: {
+    fontSize: 11,
+    fontWeight: '700',
+    color: '#38BDF8',
+    marginBottom: 4,
+    textTransform: 'uppercase',
+  },
+  textoMensaje: {
+    fontSize: 13,
+    color: '#E2E8F0',
+    lineHeight: 18,
   },
   filaDetalle: {
     flexDirection: 'row',

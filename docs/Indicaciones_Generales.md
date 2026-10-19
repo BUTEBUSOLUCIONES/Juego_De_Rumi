@@ -103,6 +103,7 @@ git add .
 git commit -m "Lo que cambiaste"
 git push
 https://github.com/BUTEBUSOLUCIONES
+https://github.com/BUTEBUSOLUCIONES/Juego_De_Rumi
 
 Ejecutar aplicacion 
 npx expo start --clear 
@@ -119,7 +120,9 @@ Qué hace este comando:
 
 Levantar Servidor web de Python 
 # Activa el entorno virtual (si lo tienes)
-venv\Scripts\activate
+python -m uvicorn main:app --host 0.0.0.0 --port 8000
+
+
 
 # Inicia el servidor
 D:\PROYECTOS_2026\PROYECTOS_VS\Juego_de_Rumi\packages\server
