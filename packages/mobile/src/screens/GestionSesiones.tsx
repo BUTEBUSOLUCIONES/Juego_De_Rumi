@@ -5,8 +5,9 @@
 // REGLA: Solo puede existir UNA sesión activa a la vez
 import { Ionicons } from '@expo/vector-icons';
 import AsyncStorage from '@react-native-async-storage/async-storage';
-import { NavigationProp, useNavigation } from '@react-navigation/native';
-import { useEffect, useMemo, useState } from 'react';
+
+import { NavigationProp, useFocusEffect, useNavigation } from '@react-navigation/native';
+import { useCallback, useMemo, useState } from 'react';
 import {
   Alert,
   FlatList,
@@ -106,8 +107,13 @@ const GestorSesiones = () => {
   const [participantesSeleccionados, setParticipantesSeleccionados] = useState<string[]>([]);
   const fechaActual = new Date();
 
-  // ==============================================================
-  // CARGA INICIAL DE DATOS — desde base local con cantidad de participantes
+   // ==============================================================
+  // CARGA DE DATOS AL ENFOCAR LA PANTALLA — desde base local con cantidad de participantes
+  // INICIO
+  // Propósito: Recarga la lista de sesiones cada vez que la pantalla 
+  // recibe el foco (al entrar o al volver de SesionActiva). Esto asegura 
+  // que el estado de 'Activa' esté siempre actualizado y el botón de 
+  // crear sesión se bloquee o desbloquee según la regla de negocio.
   // ==============================================================
   const cargarDatos = async () => {
     try {
@@ -138,9 +144,15 @@ const GestorSesiones = () => {
     }
   };
 
-  useEffect(() => {
-    cargarDatos();
-  }, []);
+  useFocusEffect(
+    useCallback(() => {
+      cargarDatos();
+    }, [])
+  );
+  // ==============================================================
+  // FIN: Carga de datos al enfocar la pantalla
+  // ==============================================================
+
 
   // ==============================================================
   // ✅ NUEVA REGLA: Detectar si ya existe una sesión activa
@@ -255,6 +267,7 @@ const GestorSesiones = () => {
       descripcion: descripcionFinal,
       valorApuestaBase: valorApuestaFinal,
       estado: 'Activa',
+      sincronizado: 'Pendiente', // ✅ AGREGADO
     });
 
     for (const idParticipante of participantesSeleccionados) {
@@ -265,6 +278,7 @@ const GestorSesiones = () => {
           participanteId: idParticipante,
           nombre: datosParticipante.nombre,
           estadoEnSesion: 'Activo',
+          sincronizado: 'Pendiente', // ✅ AGREGADO
         });
       }
     }

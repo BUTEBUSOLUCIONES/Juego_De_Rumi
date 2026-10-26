@@ -1,82 +1,156 @@
 ﻿// D:\PROYECTOS_2026\PROYECTOS_VS\Juego_de_Rumi\packages\mobile\App.tsx
-// Componente raíz de la aplicación — controla arranque, inicialización de base de datos local
-// y configuración de navegación entre todas las pantallas. Sin conexión a servidor externo.
+// Historial de cambios:
+// | Fecha       | Versión | Descripción del cambio |
+// |-------------|---------|------------------------|
+// | 17/10/2026  | 1.0.0   | Versión inicial del componente raíz App.tsx. |
+// | 22/10/2026  | 1.1.0   | Ajuste de documentación y formato de comentarios según reglas del proyecto. |
+// | 22/10/2026  | 1.2.0   | Integración de la sincronización periódica basada en la configuración del servidor (activación e intervalo). |
+
+// Componente raíz de la aplicación.
+// Garantiza que la base de datos SQLite se inicialice COMPLETAMENTE 
+// antes de permitir cualquier operación de sincronización.
+
 import { NavigationContainer } from '@react-navigation/native';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, AppState, StyleSheet, Text, View } from 'react-native';
 
 // Menú lateral (Drawer) con todas las pantallas
 import MenuLateral from './src/navegacion/MenuLateral';
 
-// Servicio de inicialización de base de datos local
-import { inicializarBaseDatos } from './src/servicios/BaseDatos';
+// Servicio de inicialización de base de datos local (SQLite)
+import { inicializarBaseDatosSQLite } from './src/servicios/ConexionSQLite';
+
 // Servicio de sincronización con servidor
 import { sincronizarTodo } from './src/servicios/Sincronizacion';
 
+// Servicio de visualización de contenido de la base de datos
+import { verTodaLaBase } from './src/servicios/VerBaseDatos';
+
+// Servicio de configuración del servidor
+import { obtenerConfiguracion } from './src/servicios/ConfiguracionServidor';
+
 // ==============================================================
 // FUNCIÓN: App
-// INICIO — Línea: 45
-// Propósito: Componente principal que ejecuta el flujo de arranque:
-//  1. Muestra pantalla de carga mientras inicializa la base de datos
-//  2. Espera confirmación de preparación del almacenamiento local
-//  3. Monta el contenedor de navegación con todas las rutas definidas
-//  4. Define estilos de encabezado y comportamiento visual global
+// INICIO
+// Propósito: Componente raíz de la aplicación. Garantiza que la base de datos 
+//            SQLite se inicialice completamente antes de permitir cualquier 
+//            operación de sincronización o navegación.
+// Parámetros: Ninguno.
+// Retorna: JSX.Element (Pantalla de carga o NavigationContainer con MenuLateral).
 // ==============================================================
 export default function App() {
-  // Estado de carga durante la preparación de recursos
   const [cargando, setCargando] = useState(true);
-  // Mensaje dinámico mostrado en pantalla de arranque
   const [mensajeInicio, setMensajeInicio] = useState('Preparando aplicación...');
+  
+  // Usamos useRef para evitar que los efectos se disparen múltiples veces
+  const appIsReady = useRef(false);
 
   // ==============================================================
-  // FUNCIÓN: arrancar
-  // INICIO — Línea: 58
-  // Propósito: Ejecuta secuencia de inicialización al montar el componente:
-  //  - Llama al servicio que crea/verifica la estructura de la base de datos
-  //  - Actualiza el mensaje de estado según el resultado
-  //  - Retrasa ocultar pantalla de carga para experiencia visual
+  // EFECTO: Inicialización estricta y secuencial
+  // INICIO
+  // Propósito: Ejecutar la secuencia de arranque: DB -> Verificación -> Sync.
   // ==============================================================
   useEffect(() => {
     const arrancar = async () => {
-      const resultado = await inicializarBaseDatos();
-      setMensajeInicio(resultado.mensaje);
-      setTimeout(() => setCargando(false), 1200);
+      if (appIsReady.current) return; // Evitar doble ejecución
+      
+      setMensajeInicio('Inicializando base de datos local...');
+      
+      // 1. Esperar a que la base de datos esté 100% lista
+      const resultado = await inicializarBaseDatosSQLite();
+      
+      if (resultado.exito) {
+        setMensajeInicio('Base de datos lista. Consultando registros...');
+        
+        // ✅ Mostrar contenido de todas las tablas en consola
+        await verTodaLaBase();
+        
+        setMensajeInicio('Sincronizando datos...');
+        
+        // 2. SOLO AHORA ejecutamos la primera sincronización
+        await sincronizarTodo();
+        
+        setMensajeInicio('¡Aplicación lista!');
+        appIsReady.current = true;
+      } else {
+        setMensajeInicio(`Error: ${resultado.mensaje}`);
+      }
+      
+      // 3. Pequeña pausa para que el usuario vea el mensaje
+      setTimeout(() => setCargando(false), 800);
     };
+    
     arrancar();
   }, []);
+  // ==============================================================
+  // FIN: Inicialización estricta
+  // ==============================================================
 
   // ==============================================================
-  // 🔄 SINCRONIZACIÓN AUTOMÁTICA — NUEVO
+  // EFECTO: Sincronización al volver a primer plano
+  // INICIO
+  // Propósito: Sincronizar datos automáticamente cuando la app recupera el foco.
   // ==============================================================
-  // Al iniciar la app → sincroniza
   useEffect(() => {
-    sincronizarTodo();
-  }, []);
-
-  // Al volver a la app desde segundo plano → sincroniza
-  useEffect(() => {
+    if (!appIsReady.current) return; // No hacer nada si aún no está lista
+    
     const subscripcion = AppState.addEventListener('change', (estado) => {
       if (estado === 'active') {
+        console.log('🔄 App volvió a primer plano. Sincronizando...');
         sincronizarTodo();
       }
     });
-    return () => subscripcion.remove();
+    
+    return () => {
+      subscripcion.remove();
+    };
   }, []);
+  // ==============================================================
+  // FIN: Sincronización al volver a primer plano
+  // ==============================================================
 
-  // Cada 5 minutos en primer plano → revisa
+  // ==============================================================
+  // EFECTO: Sincronización periódica basada en configuración
+  // INICIO
+  // Propósito: Mantener los datos actualizados en segundo plano según el 
+  //            intervalo configurado por el usuario, si la opción está activa.
+  // ==============================================================
   useEffect(() => {
-    const intervalo = setInterval(() => {
-      sincronizarTodo();
-    }, 5 * 60 * 1000); // ⏱️ 5 minutos
+    if (!appIsReady.current) return; // No hacer nada si aún no está lista
 
-    return () => clearInterval(intervalo);
+    let intervalo: ReturnType<typeof setInterval> | null = null;
+
+    const configurarSincronizacionPeriodica = async () => {
+      const config = await obtenerConfiguracion();
+      
+      if (config.sincronizacionAutomatica) {
+        const milisegundos = config.intervaloSincronizacion * 60 * 1000;
+        console.log(`⏱️ Sincronización periódica activada: cada ${config.intervaloSincronizacion} minutos.`);
+        
+        intervalo = setInterval(() => {
+          console.log('🔄 Ejecutando sincronización periódica...');
+          sincronizarTodo();
+        }, milisegundos);
+      } else {
+        console.log('⏸️ Sincronización periódica desactivada por configuración del usuario.');
+      }
+    };
+
+    configurarSincronizacionPeriodica();
+
+    return () => {
+      if (intervalo) {
+        clearInterval(intervalo);
+      }
+    };
   }, []);
+  // ==============================================================
+  // FIN: Sincronización periódica basada en configuración
+  // ==============================================================
 
   // ==============================================================
-  // FIN: Sincronización
+  // RENDERIZADO: Pantalla de carga
   // ==============================================================
-
-  // Pantalla de carga — visible mientras la base de datos se prepara
   if (cargando) {
     return (
       <View style={estilos.pantallaCarga}>
@@ -91,7 +165,9 @@ export default function App() {
     );
   }
 
-  // Estructura de navegación principal — menú lateral con todas las pantallas
+  // ==============================================================
+  // RENDERIZADO: Navegación principal
+  // ==============================================================
   return (
     <NavigationContainer>
       <MenuLateral />
@@ -103,9 +179,7 @@ export default function App() {
 // ==============================================================
 
 // ==============================================================
-// ESTILOS: estilos globales de la aplicación
-// Propósito: Definir apariencia visual consistente en pantallas de carga
-// Colores: Fondo oscuro #0A1629 | Texto claro #FFFFFF | Indicador naranja #F59E0B
+// ESTILOS
 // ==============================================================
 const estilos = StyleSheet.create({
   pantallaCarga: {

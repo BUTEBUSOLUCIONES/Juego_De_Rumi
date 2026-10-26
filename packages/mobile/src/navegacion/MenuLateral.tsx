@@ -1,11 +1,13 @@
 // D:\PROYECTOS_2026\PROYECTOS_VS\Juego_de_Rumi\packages\mobile\src\navegacion\MenuLateral.tsx
-// Menú lateral (Drawer) con todas las opciones de la aplicación
+// Menú lateral (Drawer) con todas las opciones de la aplicación, incluyendo Diagnóstico.
+
 import { createDrawerNavigator } from '@react-navigation/drawer';
 
 // Importación de pantallas
 import AcercaDe from '../screens/AcercaDe';
 import ConfiguracionServidor from '../screens/ConfiguracionServidor';
 import ConsultarSesiones from '../screens/ConsultarSesiones';
+import Diagnostico from '../screens/Diagnostico'; // <-- NUEVO
 import Estadisticas from '../screens/Estadisticas';
 import GestionSesiones from '../screens/GestionSesiones';
 import Historial from '../screens/Historial';
@@ -48,13 +50,14 @@ type RutasMenu = {
   RegistrosSincronizacion: undefined;
   ConfiguracionServidor: undefined;
   AcercaDe: undefined;
+  Diagnostico: undefined; // <-- NUEVO
 };
 
 const Menu = createDrawerNavigator<RutasMenu>();
 
 // ==============================================================
 // COMPONENTE: MenuLateral
-// Propósito: Menú lateral con todas las pantallas + opción Acerca de
+// Propósito: Menú lateral con todas las pantallas + opción Acerca de y Diagnóstico
 // ==============================================================
 export default function MenuLateral() {
   return (
@@ -95,7 +98,7 @@ export default function MenuLateral() {
       <Menu.Screen
         name="SesionActiva"
         component={SesionActiva}
-        options={{ title: 'Sesión Activa', drawerLabel: '🎮  Sesión Activa' }}
+        options={{ title: 'Partidas', drawerLabel: '🎮  Partidas' }}
       />
       <Menu.Screen
         name="ConsultarSesiones"
@@ -131,6 +134,12 @@ export default function MenuLateral() {
         name="ConfiguracionServidor"
         component={ConfiguracionServidor}
         options={{ title: 'Configuración del Servidor', drawerLabel: '⚙️  Configuración' }}
+      />
+      {/* NUEVA OPCIÓN DE DIAGNÓSTICO */}
+      <Menu.Screen
+        name="Diagnostico"
+        component={Diagnostico}
+        options={{ title: 'Diagnóstico Técnico', drawerLabel: '🛠️  Diagnóstico' }}
       />
       <Menu.Screen
         name="AcercaDe"

@@ -1,7 +1,9 @@
 // D:\PROYECTOS_2026\PROYECTOS_VS\Juego_de_Rumi\packages\mobile\src\screens\Sincronizar.tsx
-// Fecha última modificación: 17/10/2026
+// Pantalla de sincronización manual con el servidor.
+// Muestra el estado de la conexión, permite probar la URL y ejecuta el proceso por lotes.
 
 import { Ionicons } from '@expo/vector-icons';
+import { useNavigation } from '@react-navigation/native'; // <-- Hook seguro de navegación
 import { useState } from 'react';
 import {
   ActivityIndicator,
@@ -13,75 +15,68 @@ import {
   View,
 } from 'react-native';
 
-// ✅ Importación correcta desde el servicio
 import {
-  obtenerConfiguracion,
-  guardarConfiguracion,
   construirUrlServidor,
-  CLAVE_GLOBAL,
+  obtenerConfiguracion,
 } from '../servicios/ConfiguracionServidor';
 
-// ✅ Importamos la función de sincronización
-import { sincronizarTodo, ResultadoSincronizacion } from '../servicios/Sincronizacion';
+import { ResultadoSincronizacion, sincronizarTodo } from '../servicios/Sincronizacion';
 
-export default function PantallaSincronizar({ navegacion }: any) {
+// ==============================================================
+// COMPONENTE: PantallaSincronizar
+// INICIO
+// ==============================================================
+export default function PantallaSincronizar() {
+  // Usamos el hook oficial de React Navigation (evita errores de props undefined)
+  const navigation = useNavigation<any>();
+  
   const [sincronizando, setSincronizando] = useState(false);
   const [mensaje, setMensaje] = useState('');
-  const [detalles, setDetalles] = useState<ResultadoSincronizacion['detalles'] | null>(null);
-  const [servidorOk, setServidorOk] = useState<boolean | null>(null);
+  const [resultado, setResultado] = useState<ResultadoSincronizacion | null>(null);
 
+  // ==============================================================
+  // FUNCIÓN: iniciarSincronizacion
+  // INICIO
+  // ==============================================================
   const iniciarSincronizacion = async () => {
     setSincronizando(true);
-    setMensaje('Verificando conexión con el servidor...');
-    setDetalles(null);
-    setServidorOk(null);
+    setMensaje('Verificando conexión e iniciando sincronización...');
+    setResultado(null);
 
     try {
-      // PASO 1: Verificar disponibilidad PRIMERO
-      const { verificarServidor } = require('../servicios/Sincronizacion');
-      const servidorDisponible = await verificarServidor();
+      const res = await sincronizarTodo();
       
-      setServidorOk(servidorDisponible);
-      
-      // 🛑 DETENERSE AQUÍ si no está disponible
-      if (!servidorDisponible) {
-        setMensaje('❌ El servidor no está disponible. Verifica la IP, puerto o la red.');
-        Alert.alert(
-          'Servidor inaccesible',
-          'No se puede conectar al servidor.\n\nComprueba que:\n- La IP es correcta\n- El equipo está encendido\n- Estás en la misma red Wi-Fi',
-          [{ text: 'Entendido' }]
-        );
-        setSincronizando(false);
-        return; // ⛔ NO continúa
-      }
+      setResultado(res);
+      setMensaje(res.mensaje);
 
-      // ✅ Solo si está disponible → proceder
-      setMensaje('Servidor conectado ✅ Iniciando sincronización...');
-      
-      const resultado = await sincronizarTodo();
-
-      setDetalles(resultado.detalles);
-      setMensaje(resultado.mensaje);
-
-      if (resultado.exito) {
-        Alert.alert('✅ Éxito', resultado.mensaje, [
-          { text: 'Aceptar', onPress: () => navegacion.goBack() },
+      if (res.exito) {
+        Alert.alert('✅ Éxito', res.mensaje, [
+          { text: 'Aceptar', onPress: () => navigation.goBack() }, // <-- Corregido
         ]);
       } else {
+        const erroresTexto = res.errores.length > 0 ? '\n\n' + res.errores.join('\n') : '';
         Alert.alert(
           '⚠️ Sincronización con observaciones',
-          resultado.mensaje + '\n\n' + resultado.errores.join('\n'),
+          res.mensaje + erroresTexto,
           [{ text: 'Entendido' }]
         );
       }
     } catch (error) {
-      setMensaje('Error inesperado: ' + String(error));
-      Alert.alert('❌ Error', String(error), [{ text: 'Aceptar' }]);
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      setMensaje('Error inesperado: ' + errorMsg);
+      Alert.alert('❌ Error', errorMsg, [{ text: 'Aceptar' }]);
     } finally {
       setSincronizando(false);
     }
   };
+  // ==============================================================
+  // FIN: iniciarSincronizacion
+  // ==============================================================
 
+  // ==============================================================
+  // FUNCIÓN: probarUrl
+  // INICIO
+  // ==============================================================
   const probarUrl = async () => {
     try {
       const url = await construirUrlServidor();
@@ -95,11 +90,14 @@ export default function PantallaSincronizar({ navegacion }: any) {
       Alert.alert('❌ Error', String(error), [{ text: 'Aceptar' }]);
     }
   };
+  // ==============================================================
+  // FIN: probarUrl
+  // ==============================================================
 
   return (
     <View style={estilos.contenedor}>
       <View style={estilos.cabecera}>
-        <TouchableOpacity style={estilos.botonVolver} onPress={() => navegacion.goBack()}>
+        <TouchableOpacity style={estilos.botonVolver} onPress={() => navigation.goBack()}>
           <Ionicons name="arrow-back" size={24} color="#fff" />
         </TouchableOpacity>
         <Text style={estilos.titulo}>Sincronización con Servidor</Text>
@@ -109,9 +107,9 @@ export default function PantallaSincronizar({ navegacion }: any) {
         <View style={estilos.tarjeta}>
           <Text style={estilos.etiqueta}>Estado del servidor:</Text>
           <View style={estilos.filaEstado}>
-            {servidorOk === null ? (
+            {resultado === null ? (
               <Text style={estilos.textoInfo}>Sin verificar</Text>
-            ) : servidorOk ? (
+            ) : resultado.servidorActivo ? (
               <>
                 <Ionicons name="checkmark-circle" size={20} color="#4CAF50" />
                 <Text style={estilos.textoOk}> Disponible</Text>
@@ -154,25 +152,33 @@ export default function PantallaSincronizar({ navegacion }: any) {
           </View>
         ) : null}
 
-        {detalles && (
+        {resultado && resultado.resumen && (
           <View style={estilos.tarjeta}>
             <Text style={estilos.subtitulo}>Resumen del proceso:</Text>
-            {Object.entries(detalles).map(([nombre, res]) => (
-              <View key={nombre} style={estilos.filaResumen}>
-                <Text style={estilos.nombreTabla}>
-                  {nombre.charAt(0).toUpperCase() + nombre.slice(1).replace(/[A-Z]/g, ' $&')}:
-                </Text>
-                <Text style={estilos.datosResumen}>
-                  {res.nuevos} nuevos | {res.actualizados} act. | {res.noEnviados} fallidos
-                </Text>
-              </View>
-            ))}
+            <View style={estilos.filaResumen}>
+              <Text style={estilos.nombreTabla}>Total procesado:</Text>
+              <Text style={estilos.datosResumen}>{resultado.resumen.total}</Text>
+            </View>
+            <View style={estilos.filaResumen}>
+              <Text style={estilos.nombreTabla}>Nuevos:</Text>
+              <Text style={estilos.datosResumen}>{resultado.resumen.nuevos}</Text>
+            </View>
+            <View style={estilos.filaResumen}>
+              <Text style={estilos.nombreTabla}>Actualizados:</Text>
+              <Text style={estilos.datosResumen}>{resultado.resumen.actualizados}</Text>
+            </View>
+            <View style={estilos.filaResumen}>
+              <Text style={estilos.nombreTabla}>Errores:</Text>
+              <Text style={[estilos.datosResumen, resultado.resumen.errores > 0 && { color: '#F44336' }]}>
+                {resultado.resumen.errores}
+              </Text>
+            </View>
           </View>
         )}
 
         <TouchableOpacity
           style={estilos.botonVolverMenu}
-          onPress={() => navegacion.navigate('MenuPrincipal')}
+          onPress={() => navigation.navigate('Inicio')} // <-- Corregido
         >
           <Ionicons name="home" size={18} color="#fff" />
           <Text style={estilos.textoBoton}> Volver al Menú Principal</Text>
@@ -181,131 +187,40 @@ export default function PantallaSincronizar({ navegacion }: any) {
     </View>
   );
 }
+// ==============================================================
+// FIN: PantallaSincronizar
+// ==============================================================
 
+// ==============================================================
+// ESTILOS
+// INICIO
+// ==============================================================
 const estilos = StyleSheet.create({
-  contenedor: {
-    flex: 1,
-    backgroundColor: '#0A1629',
-  },
-  cabecera: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 16,
-    backgroundColor: '#0F213D',
-  },
-  botonVolver: {
-    padding: 8,
-    marginRight: 8,
-  },
-  titulo: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-  },
-  contenido: {
-    padding: 20,
-  },
-  tarjeta: {
-    backgroundColor: '#132744',
-    borderRadius: 12,
-    padding: 18,
-    marginBottom: 20,
-  },
-  etiqueta: {
-    fontSize: 15,
-    color: '#B0C4DE',
-    marginBottom: 8,
-  },
-  filaEstado: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 12,
-  },
-  textoInfo: {
-    color: '#8899AA',
-    fontSize: 15,
-  },
-  textoOk: {
-    color: '#4CAF50',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  textoError: {
-    color: '#F44336',
-    fontSize: 15,
-    fontWeight: '600',
-  },
-  botonSecundario: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    backgroundColor: '#1A3358',
-    borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 14,
-    marginTop: 8,
-  },
-  textoBotonSecundario: {
-    color: '#4A90D9',
-    fontSize: 14,
-  },
-  botonPrincipal: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#2E7D32',
-    borderRadius: 10,
-    paddingVertical: 14,
-    marginBottom: 20,
-  },
-  botonDesactivado: {
-    backgroundColor: '#265A29',
-    opacity: 0.7,
-  },
-  textoBoton: {
-    color: '#FFFFFF',
-    fontSize: 16,
-    fontWeight: 'bold',
-    marginLeft: 8,
-  },
-  tarjetaMensaje: {
-    backgroundColor: '#1A3358',
-    borderRadius: 10,
-    padding: 16,
-    marginBottom: 20,
-  },
-  textoMensaje: {
-    color: '#E0E6ED',
-    fontSize: 15,
-    textAlign: 'center',
-  },
-  subtitulo: {
-    fontSize: 15,
-    fontWeight: 'bold',
-    color: '#FFFFFF',
-    marginBottom: 12,
-  },
-  filaResumen: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-    borderBottomWidth: 1,
-    borderBottomColor: '#1E3A5F',
-  },
-  nombreTabla: {
-    color: '#B0C4DE',
-    fontSize: 13,
-  },
-  datosResumen: {
-    color: '#90EE90',
-    fontSize: 13,
-  },
-  botonVolverMenu: {
-    flexDirection: 'row',
-    justifyContent: 'center',
-    alignItems: 'center',
-    backgroundColor: '#4A90D9',
-    borderRadius: 10,
-    paddingVertical: 12,
-    marginTop: 10,
-  },
+  contenedor: { flex: 1, backgroundColor: '#0A1629' },
+  cabecera: { flexDirection: 'row', alignItems: 'center', padding: 16, backgroundColor: '#0F213D' },
+  botonVolver: { padding: 8, marginRight: 8 },
+  titulo: { fontSize: 18, fontWeight: 'bold', color: '#FFFFFF' },
+  contenido: { padding: 20 },
+  tarjeta: { backgroundColor: '#132744', borderRadius: 12, padding: 18, marginBottom: 20 },
+  etiqueta: { fontSize: 15, color: '#B0C4DE', marginBottom: 8 },
+  filaEstado: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
+  textoInfo: { color: '#8899AA', fontSize: 15 },
+  textoOk: { color: '#4CAF50', fontSize: 15, fontWeight: '600' },
+  textoError: { color: '#F44336', fontSize: 15, fontWeight: '600' },
+  botonSecundario: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#1A3358', borderRadius: 8, paddingVertical: 10, paddingHorizontal: 14, marginTop: 8 },
+  textoBotonSecundario: { color: '#4A90D9', fontSize: 14 },
+  botonPrincipal: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: '#2E7D32', borderRadius: 10, paddingVertical: 14, marginBottom: 20 },
+  botonDesactivado: { backgroundColor: '#265A29', opacity: 0.7 },
+  textoBoton: { color: '#FFFFFF', fontSize: 16, fontWeight: 'bold', marginLeft: 8 },
+  tarjetaMensaje: { backgroundColor: '#1A3358', borderRadius: 10, padding: 16, marginBottom: 20 },
+  textoMensaje: { color: '#E0E6ED', fontSize: 15, textAlign: 'center' },
+  subtitulo: { fontSize: 15, fontWeight: 'bold', color: '#FFFFFF', marginBottom: 12 },
+  filaResumen: { flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#1E3A5F' },
+  nombreTabla: { color: '#B0C4DE', fontSize: 14 },
+  datosResumen: { color: '#90EE90', fontSize: 14, fontWeight: '600' },
+  botonVolverMenu: { flexDirection: 'row', justifyContent: 'center', alignItems: 'center', backgroundColor: '#4A90D9', borderRadius: 10, paddingVertical: 12, marginTop: 10 },
 });
+// ==============================================================
+// FIN: ESTILOS
+// ==============================================================
+//0902028003000

@@ -2,10 +2,9 @@
 // Pantalla de Inicio: presenta menú principal con tarjetas en rejilla
 // Orden de acceso: Participantes → Sesiones → Sesión Activa → Consultar → Estadísticas → Historial
 
-import React from 'react';
-import { View, Text, StyleSheet, TouchableOpacity } from 'react-native';
-import { useNavigation, NavigationProp } from '@react-navigation/native';
 import { Ionicons } from '@expo/vector-icons';
+import { NavigationProp, useNavigation } from '@react-navigation/native';
+import { StyleSheet, Text, TouchableOpacity, View } from 'react-native';
 
 // Definición de rutas disponibles desde esta pantalla
 type RutasNavegacion = {
@@ -44,8 +43,8 @@ const PantallaInicio = () => {
     },
     {
       id: 'SesionActiva',
-      titulo: 'Sesión Activa',
-      subtitulo: 'Iniciar o gestionar partida',
+      titulo: 'Partidas',
+      subtitulo: 'Iniciar o gestionar partidas',
       icono: 'time' as const
     },
     {
